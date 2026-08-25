@@ -80,7 +80,7 @@ export function NotificationBell() {
 
   const unread = notifications.filter((n) => !n.read).length;
 
-  const loadNotifications = useCallback(async (uid: string) => {
+  const loadNotifications = async (uid: string) => {
     const readIds = loadReadIds(uid);
 
     const incomingQuery = await supabase
@@ -94,8 +94,10 @@ export function NotificationBell() {
       .order('created_at', { ascending: false })
       .limit(20);
 
-    let incoming = incomingQuery.data;
-    if (incomingQuery.error) {
+    let incoming: any[] | null = null;
+    if (!incomingQuery.error && incomingQuery.data) {
+      incoming = incomingQuery.data;
+    } else {
       const fallback = await supabase
         .from('requests')
         .select('id, status, created_at, from_user, to_user, listing_id')
@@ -112,7 +114,7 @@ export function NotificationBell() {
       .order('created_at', { ascending: false })
       .limit(10);
 
-    let outgoing = outgoingQuery.data;
+    let outgoing: any[] | null = outgoingQuery.data;
     if (outgoingQuery.error) {
       const fallback = await supabase
         .from('requests')
@@ -124,14 +126,13 @@ export function NotificationBell() {
     }
 
     const rows = incoming || [];
-    const listingIds = [
-      ...new Set(
-        [...rows, ...(outgoing || [])]
-          .map((r: any) => r.listing_id)
-          .filter(Boolean)
-      ),
-    ];
-    const fromUserIds = [...new Set(rows.map((r: any) => r.from_user).filter(Boolean))];
+    const rawListingIds = [...rows, ...(outgoing || [])]
+      .map((r: any) => r.listing_id)
+      .filter(Boolean);
+    const listingIds = rawListingIds.filter((v, i, a) => a.indexOf(v) === i);
+
+    const rawUserIds = rows.map((r: any) => r.from_user).filter(Boolean);
+    const fromUserIds = rawUserIds.filter((v, i, a) => a.indexOf(v) === i);
 
     const needsListings = [...rows, ...(outgoing || [])].some((r: any) => !listingTitle(r) || listingTitle(r) === 'a listing');
     const needsNames = rows.some((r: any) => profileName(r) === 'A student');
@@ -183,57 +184,56 @@ export function NotificationBell() {
 
     const combined = [...mappedIncoming, ...mappedOutgoing].slice(0, 20);
     setNotifications(combined);
-    setLoading(false);
-  }, []);
+  };
 
   // ✅ Single, self-contained useEffect with init() inside and proper cleanup
- const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-useEffect(() => {
-  let cancelled = false;
+  useEffect(() => {
+    let cancelled = false;
 
-  async function init() {
-    const { user } = await getCurrentUser();
-    if (!user || cancelled) {
-      setLoading(false);
-      return;
+    async function init() {
+      const { user } = await getCurrentUser();
+      if (!user || cancelled) {
+        setLoading(false);
+        return;
+      }
+      setUserId(user.id);
+      await loadNotifications(user.id);
+
+      // Remove any existing channel first before creating a new one
+      if (channelRef.current) {
+        await supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+
+      if (cancelled) return;
+
+      channelRef.current = supabase
+        .channel(`requests-notif-${user.id}-${Date.now()}`) // unique name per mount
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'requests', filter: `to_user=eq.${user.id}` },
+          () => loadNotifications(user.id)
+        )
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'requests', filter: `from_user=eq.${user.id}` },
+          () => loadNotifications(user.id)
+        )
+        .subscribe();
     }
-    setUserId(user.id);
-    await loadNotifications(user.id);
 
-    // Remove any existing channel first before creating a new one
-    if (channelRef.current) {
-      await supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
+    init();
 
-    if (cancelled) return;
-
-    channelRef.current = supabase
-      .channel(`requests-notif-${user.id}-${Date.now()}`) // unique name per mount
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'requests', filter: `to_user=eq.${user.id}` },
-        () => loadNotifications(user.id)
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'requests', filter: `from_user=eq.${user.id}` },
-        () => loadNotifications(user.id)
-      )
-      .subscribe();
-  }
-
-  init();
-
-  return () => {
-    cancelled = true;
-    if (channelRef.current) {
-      supabase.removeChannel(channelRef.current);
-      channelRef.current = null;
-    }
-  };
-}, [loadNotifications]);
+    return () => {
+      cancelled = true;
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, []);
 
   // Click-outside handler
   useEffect(() => {
