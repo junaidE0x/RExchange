@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Search, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { listings, categories, currentUser } from '@/lib/mock-data';
+import { getCurrentUser } from '@/lib/auth';
+import { getListings } from '@/lib/listings';
 import type { CategoryId } from '@/lib/mock-data';
 import { ListingCard } from '@/components/listing-card';
 import { PostListingModal } from '@/components/post-listing-modal';
@@ -57,17 +59,53 @@ function RippleChip({ active, onClick, label }: { active: boolean; onClick: () =
 }
 
 export default function DashboardPage() {
-  const [filter, setFilter] = useState<'all' | CategoryId>('all');
+  const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [listings, setListings] = useState<any[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
 
+  async function loadListings(category: string) {
+    const { data, error } = await getListings(category);
+    if (!error && data) setListings(data);
+  }
+
+  useEffect(() => {
+    async function loadData() {
+      try {
+        const { user, profile } = await getCurrentUser();
+        
+        // If no session, redirect to login
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+        
+        setProfile(profile);
+        await loadListings(activeCategory);
+      } catch (error) {
+        console.error('Error loading dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadData();
+  }, [router]);
+
+  const handleCategoryClick = (catId: string) => {
+    setActiveCategory(catId);
+    loadListings(catId);
+  };
+
   const filtered = listings.filter((l) => {
-    const catMatch = filter === 'all' || l.category === filter;
+    const studentName = l.student?.name || l.profiles?.name || '';
     const searchMatch =
       !search ||
-      l.title.toLowerCase().includes(search.toLowerCase()) ||
-      l.student.name.toLowerCase().includes(search.toLowerCase());
-    return catMatch && searchMatch;
+      l.title?.toLowerCase().includes(search.toLowerCase()) ||
+      studentName.toLowerCase().includes(search.toLowerCase());
+    return searchMatch;
   });
 
   return (
@@ -87,8 +125,12 @@ export default function DashboardPage() {
               <p className="text-sm text-muted-foreground flex items-center gap-2">
                 <Sun className="h-4 w-4 text-amber-400" /> Good morning
               </p>
-              <h1 className="text-2xl font-bold mt-1">{currentUser.name} <span className="text-muted-foreground text-lg font-normal">👋</span></h1>
-              <p className="text-sm text-muted-foreground mt-1">{currentUser.dept} · {currentUser.year}st Year · {currentUser.regNo}</p>
+              <h1 className="text-2xl font-bold mt-1">
+                {profile?.name ?? 'Loading...'} <span className="text-muted-foreground text-lg font-normal">👋</span>
+              </h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {profile?.dept} · {profile?.year}st Year · {profile?.reg_no}
+              </p>
             </div>
             <Button
               onClick={() => setModalOpen(true)}
@@ -104,8 +146,8 @@ export default function DashboardPage() {
           {filterChips.map((chip) => (
             <RippleChip
               key={chip.id}
-              active={filter === chip.id}
-              onClick={() => setFilter(chip.id)}
+              active={activeCategory === chip.id}
+              onClick={() => handleCategoryClick(chip.id)}
               label={chip.label}
             />
           ))}
@@ -115,7 +157,7 @@ export default function DashboardPage() {
         <AnimatePresence mode="wait">
           {filtered.length > 0 ? (
             <motion.div
-              key={filter}
+              key={activeCategory}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
             >
               {filtered.map((listing, i) => (

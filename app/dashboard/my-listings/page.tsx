@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { myListings, currentUser } from '@/lib/mock-data';
-import type { Listing } from '@/lib/mock-data';
+import { getUserListings, deleteListing } from '@/lib/listings';
+import { getCurrentUser } from '@/lib/auth';
 import { ListingCard } from '@/components/listing-card';
 import { PostListingModal } from '@/components/post-listing-modal';
 import { DashboardShell } from '@/components/dashboard-shell';
@@ -13,12 +13,34 @@ import { PageTransition } from '@/components/page-transition';
 import { toast } from 'sonner';
 
 export default function MyListingsPage() {
-  const [listings, setListings] = useState<Listing[]>(myListings);
+  const [listings, setListings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
 
-  const handleDelete = (id: string) => {
-    setListings((prev) => prev.filter((l) => l.id !== id));
-    toast.success('Listing deleted successfully.');
+  useEffect(() => {
+    async function load() {
+      try {
+        const { user } = await getCurrentUser();
+        if (!user) return;
+        const { data, error } = await getUserListings(user.id);
+        if (!error && data) setListings(data);
+      } catch (err) {
+        console.error('Error loading my listings:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  const handleDelete = async (id: string) => {
+    const { error } = await deleteListing(id);
+    if (!error) {
+      setListings((prev) => prev.filter((l) => l.id !== id));
+      toast.success('Listing deleted.');
+    } else {
+      toast.error('Failed to delete listing.');
+    }
   };
 
   const handleEdit = (id: string) => {
@@ -32,7 +54,9 @@ export default function MyListingsPage() {
           <div>
             <h1 className="text-2xl font-bold">My Listings</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              {listings.length} {listings.length === 1 ? 'listing' : 'listings'} · {currentUser.name}
+              {loading
+                ? 'Loading your listings...'
+                : `${listings.length} ${listings.length === 1 ? 'listing' : 'listings'}`}
             </p>
           </div>
           <Button
@@ -43,19 +67,30 @@ export default function MyListingsPage() {
           </Button>
         </div>
 
-        {listings.length > 0 ? (
+        {loading ? (
+          <div className="text-center py-20">
+            <p className="text-muted-foreground animate-pulse">Loading listings...</p>
+          </div>
+        ) : listings.length > 0 ? (
           <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             <AnimatePresence>
               {listings.map((listing, i) => (
-                <ListingCard
-                  key={listing.id}
-                  listing={listing}
-                  index={i}
-                  variant="owned"
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                  exitAnimation
-                />
+                <div key={listing.id} className="relative group">
+                  <ListingCard
+                    listing={listing}
+                    index={i}
+                    variant="owned"
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                    exitAnimation
+                  />
+                  <button
+                    onClick={() => handleDelete(listing.id)}
+                    className="absolute top-3 right-3 z-20 text-xs text-red-400 hover:text-red-300 bg-black/60 hover:bg-black/80 px-2.5 py-1 rounded-lg border border-red-500/30 backdrop-blur-md transition-colors"
+                  >
+                    Delete
+                  </button>
+                </div>
               ))}
             </AnimatePresence>
           </motion.div>

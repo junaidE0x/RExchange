@@ -24,7 +24,7 @@ const typeLabels: Record<string, string> = {
 };
 
 interface ListingCardProps {
-  listing: Listing;
+  listing: any;
   index?: number;
   variant?: 'default' | 'owned' | 'saved';
   onEdit?: (id: string) => void;
@@ -43,9 +43,16 @@ export function ListingCard({
   exitAnimation = false,
 }: ListingCardProps) {
   const cat = categories.find((c) => c.id === listing.category);
-  const glow = categoryGlowMap[listing.category];
+  const glow = (categoryGlowMap as any)?.[listing.category] || 'rgba(124, 58, 237, 0.3)';
   const cardRef = useRef<HTMLDivElement>(null);
-  const initials = listing.student.name.split(' ').map((n) => n[0]).join('');
+  
+  const student = listing.student || listing.profiles || {};
+  const studentName = student.name || 'SRM Student';
+  const studentDept = student.dept || '';
+  const studentYear = student.year || '';
+  const avatarGradient = student.avatarGradient || 'from-violet-500 to-cyan-400';
+  const initials = studentName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'S';
+  const gradient = listing.gradient || 'from-violet-600 via-purple-700 to-indigo-800';
 
   const inner = (
     <div
@@ -61,20 +68,20 @@ export function ListingCard({
         e.currentTarget.style.borderColor = '';
       }}
     >
-      <div className={`relative h-40 bg-gradient-to-br ${listing.gradient} flex items-center justify-center overflow-hidden`}>
+      <div className={`relative h-40 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
         <div className="absolute inset-0 bg-black/20" />
         <div className="absolute inset-0 opacity-30" style={{ backgroundImage: 'radial-gradient(circle at 30% 50%, rgba(255,255,255,0.15) 0%, transparent 60%)' }} />
         <span className="relative text-5xl font-bold text-white/90 tracking-tight">
-          {listing.title.charAt(0)}
+          {listing.title ? listing.title.charAt(0) : 'R'}
         </span>
         <div className="absolute top-3 left-3">
-          <Badge variant="outline" className={`${categoryBadgeColors[listing.category]} border backdrop-blur-md text-xs`}>
-            {cat?.label}
+          <Badge variant="outline" className={`${categoryBadgeColors[listing.category] || 'bg-violet-500/15 text-violet-300 border-violet-500/30'} border backdrop-blur-md text-xs`}>
+            {cat?.label || listing.category}
           </Badge>
         </div>
         <div className="absolute top-3 right-3">
           <Badge variant="outline" className="bg-black/40 text-white border-white/20 backdrop-blur-md text-xs">
-            {typeLabels[listing.type]}
+            {typeLabels[listing.type] || listing.type}
             {listing.type === 'paid' && listing.price && ` · ₹${listing.price}`}
           </Badge>
         </div>
@@ -114,15 +121,23 @@ export function ListingCard({
           {listing.title}
         </h3>
         <div className="mt-3 flex items-center gap-2">
-          <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${listing.student.avatarGradient} flex items-center justify-center text-[10px] font-bold text-white shrink-0`}>
+          <div className={`h-7 w-7 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-[10px] font-bold text-white shrink-0`}>
             {initials}
           </div>
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-0">
-            <span className="truncate">{listing.student.name}</span>
-            <span className="text-muted-foreground/50">·</span>
-            <span className="shrink-0">{listing.student.dept}</span>
-            <span className="text-muted-foreground/50 shrink-0">·</span>
-            <span className="shrink-0">{listing.student.year}yr</span>
+            <span className="truncate">{studentName}</span>
+            {studentDept && (
+              <>
+                <span className="text-muted-foreground/50">·</span>
+                <span className="shrink-0">{studentDept}</span>
+              </>
+            )}
+            {studentYear && (
+              <>
+                <span className="text-muted-foreground/50 shrink-0">·</span>
+                <span className="shrink-0">{studentYear}yr</span>
+              </>
+            )}
           </div>
         </div>
       </div>

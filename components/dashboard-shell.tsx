@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useState, useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -12,6 +12,7 @@ import {
   DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { NotificationBell } from '@/components/notification-bell';
+import { getCurrentUser, signOut } from '@/lib/auth';
 
 const navItems = [
   { id: 'browse', label: 'Browse', icon: LayoutGrid, href: '/dashboard' },
@@ -30,8 +31,31 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, activeNav, search, onSearchChange }: DashboardShellProps) {
   const router = useRouter();
+  const [profile, setProfile] = useState<any>(null);
 
-  const handleLogout = () => router.push('/');
+  useEffect(() => {
+    async function loadUser() {
+      const { profile } = await getCurrentUser();
+      setProfile(profile);
+    }
+    loadUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await signOut();
+    router.push('/');
+  };
+
+  const getInitials = (name?: string) => {
+    if (!name) return '..';
+    return name
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -65,14 +89,14 @@ export function DashboardShell({ children, activeNav, search, onSearchChange }: 
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full glass px-2 py-1.5 hover:border-white/20 transition-all shrink-0 btn-press">
                   <div className="h-7 w-7 rounded-full bg-gradient-to-br from-violet-500 to-cyan-400 flex items-center justify-center text-xs font-bold text-white">
-                    AS
+                    {getInitials(profile?.name)}
                   </div>
-                  <span className="text-sm font-medium hidden sm:block">Aarav</span>
+                  <span className="text-sm font-medium hidden sm:block">{profile?.name?.split(' ')[0] ?? '...'}</span>
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52 glass-strong border-white/10">
-                <DropdownMenuLabel className="text-muted-foreground text-xs">Aarav Sharma</DropdownMenuLabel>
+                <DropdownMenuLabel className="text-muted-foreground text-xs">{profile?.name ?? '...'}</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-white/[0.06]" />
                 <DropdownMenuItem className="hover:bg-white/5 cursor-pointer">
                   <User className="h-4 w-4 mr-2" /> Profile

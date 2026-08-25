@@ -13,6 +13,8 @@ import type { CategoryId, ListingType } from '@/lib/mock-data';
 import {
   BookOpen, Cpu, FileText, Ticket, Gift,
 } from 'lucide-react';
+import { createListing } from '@/lib/listings';
+import { getCurrentUser } from '@/lib/auth';
 
 const iconMap: Record<string, typeof BookOpen> = {
   BookOpen, Cpu, FileText, Sparkles, Ticket, Gift,
@@ -30,15 +32,47 @@ export function PostListingModal({ open, onClose }: { open: boolean; onClose: ()
   const [description, setDescription] = useState('');
   const [type, setType] = useState<ListingType>('free');
   const [price, setPrice] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Listing posted! It will appear in the browse feed.');
+    setLoading(true);
+
+    const { user } = await getCurrentUser();
+    if (!user) {
+      toast.error('You must be logged in to post.');
+      setLoading(false);
+      return;
+    }
+
+    const { error, flagged } = await createListing({
+      title,
+      category,
+      description,
+      type,
+      price,
+      postedBy: user.id,
+    });
+
+    if (error) {
+      toast.error('Failed to post listing.');
+      setLoading(false);
+      return;
+    }
+
+    if (flagged) {
+      toast.warning('Your listing is under review.');
+    } else {
+      toast.success('Listing posted successfully!');
+    }
+
+    setLoading(false);
     setTitle('');
     setDescription('');
     setPrice('');
     setType('free');
     onClose();
+    window.location.reload();
   };
 
   return (
@@ -183,9 +217,10 @@ export function PostListingModal({ open, onClose }: { open: boolean; onClose: ()
 
                 <Button
                   type="submit"
+                  disabled={loading}
                   className="w-full bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white rounded-xl py-2.5 transition-transform hover:scale-[1.02] shadow-lg shadow-violet-500/20"
                 >
-                  Post Listing
+                  {loading ? 'Posting...' : 'Post Listing'}
                 </Button>
               </form>
             </motion.div>

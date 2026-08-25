@@ -1,28 +1,36 @@
 'use client';
 
+import { signIn } from '@/lib/auth'
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { GraduationCap, ArrowLeft, Lock, User } from 'lucide-react';
+import { GraduationCap, ArrowLeft, Lock, Mail } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [regNo, setRegNo] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     setLoading(true);
-    setTimeout(() => {
-      toast.success('Welcome back to RExchange!');
-      router.push('/dashboard');
-    }, 800);
+
+    const { error } = await signIn({ email, password });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    router.push('/dashboard');
   };
 
   return (
@@ -63,14 +71,16 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="regno">Registration Number</Label>
+              <Label htmlFor="email">SRM Email</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  id="regno"
-                  placeholder="RA2211003010XXX"
-                  value={regNo}
-                  onChange={(e) => setRegNo(e.target.value)}
+                  id="email"
+                  type="email"
+                  placeholder="yourname@srmist.edu.in"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
                   className="pl-10 bg-white/[0.03] border-white/10 focus-visible:ring-violet-500/50 placeholder:text-muted-foreground/50"
                 />
               </div>
@@ -86,10 +96,16 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
                   className="pl-10 bg-white/[0.03] border-white/10 focus-visible:ring-violet-500/50 placeholder:text-muted-foreground/50"
                 />
               </div>
             </div>
+
+            {/* Error message — only shows when there's an error */}
+            {error && (
+              <p className="text-sm text-red-400 text-center">{error}</p>
+            )}
 
             <Button
               type="submit"
@@ -97,13 +113,18 @@ export default function LoginPage() {
               className="w-full bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 text-white rounded-xl py-2.5 relative overflow-hidden transition-transform hover:scale-[1.02] shadow-lg shadow-violet-500/20"
             >
               {loading ? 'Signing in...' : 'Sign In'}
-              {!loading && <div className="absolute inset-0 animate-shimmer" />}
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-xs text-muted-foreground">
               Only SRM KTR students can access RExchange
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Don't have an account?{' '}
+              <Link href="/signup" className="text-violet-400 hover:text-violet-300 transition-colors">
+                Sign up
+              </Link>
             </p>
           </div>
         </div>
