@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
+import { getSavedListings } from '@/lib/listings';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { ListingCard } from '@/components/listing-card';
 import { toast } from 'sonner';
@@ -10,7 +12,14 @@ import { Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
+function unwrapListing(row: any) {
+  const nested = row?.listings ?? row?.listing;
+  if (Array.isArray(nested)) return nested[0] ?? null;
+  return nested ?? null;
+}
+
 export default function SavedPage() {
+  const router = useRouter();
   const [saved, setSaved] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,70 +28,27 @@ export default function SavedPage() {
       try {
         const { user } = await getCurrentUser();
         if (!user) {
-          setLoading(false);
+          router.push('/login');
           return;
         }
 
-        // 1. Try joined query first
-        const { data, error } = await supabase
-          .from('saved')
-          .select(`*, listings(*, profiles(name, dept, year, reg_no))`)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (!error && data && data.length > 0) {
-          setSaved(data);
-          setLoading(false);
-          return;
-        }
-
+        const { data, error } = await getSavedListings(user.id);
         if (error) {
-          console.warn('Joined saved query returned error, trying fallback:', error);
-        }
-
-        // 2. Fallback: 2-step query
-        const { data: rawSaved, error: rawError } = await supabase
-          .from('saved')
-          .select('id, listing_id, created_at')
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (rawError || !rawSaved || rawSaved.length === 0) {
+          console.error('Failed to fetch saved listings:', error);
+          toast.error('Could not load saved listings.');
           setSaved([]);
         } else {
-          const listingIds = rawSaved.map((r: any) => r.listing_id).filter(Boolean);
-          const { data: listingsData, error: listingsError } = await supabase
-            .from('listings')
-            .select('*, profiles(name, dept, year, reg_no)')
-            .in('id', listingIds);
-
-          if (!listingsError && listingsData) {
-            const listingsMap = new Map(listingsData.map((l: any) => [String(l.id), l]));
-            const items = rawSaved
-              .map((r: any) => {
-                const l = listingsMap.get(String(r.listing_id));
-                if (!l) return null;
-                return {
-                  id: r.id,
-                  listing_id: r.listing_id,
-                  created_at: r.created_at,
-                  listings: l,
-                };
-              })
-              .filter(Boolean);
-            setSaved(items);
-          } else {
-            setSaved([]);
-          }
+          setSaved(data || []);
         }
       } catch (err) {
         console.error('Failed to fetch saved listings:', err);
+        toast.error('Could not load saved listings.');
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, []);
+  }, [router]);
 
   const unsave = async (savedId: string) => {
     const { error } = await supabase.from('saved').delete().eq('id', savedId);
@@ -94,7 +60,9 @@ export default function SavedPage() {
     }
   };
 
-  const validSaved = saved.filter((s) => s && s.listings);
+  const validSaved = saved
+    .map((s) => ({ ...s, listings: unwrapListing(s) }))
+    .filter((s) => s && s.listings);
 
   return (
     <DashboardShell activeNav="saved">

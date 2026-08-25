@@ -169,11 +169,11 @@ export default function SignupPage() {
                   value={formData.dept}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                  className="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 >
-                  <option value="" disabled>Select</option>
+                  <option value="" disabled className="bg-zinc-900 text-white">Select</option>
                   {DEPARTMENTS.map(d => (
-                    <option key={d} value={d}>{d}</option>
+                    <option key={d} value={d} className="bg-zinc-900 text-white">{d}</option>
                   ))}
                 </select>
               </div>
@@ -186,11 +186,11 @@ export default function SignupPage() {
                   value={formData.year}
                   onChange={handleChange}
                   required
-                  className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+                  className="w-full rounded-md border border-white/10 bg-zinc-900 px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-violet-500/50"
                 >
-                  <option value="" disabled>Select</option>
+                  <option value="" disabled className="bg-zinc-900 text-white">Select</option>
                   {YEARS.map(y => (
-                    <option key={y} value={y}>{y}st/nd/rd/th Year</option>
+                    <option key={y} value={y} className="bg-zinc-900 text-white">{y}st/nd/rd/th Year</option>
                   ))}
                 </select>
               </div>

@@ -179,3 +179,8 @@
 @media (max-width: 768px) {
   .cursor-dot, .cursor-ring { display: none; }
 }
+
+select option {
+  background-color: #18181b;
+  color: #fafafa;
+}

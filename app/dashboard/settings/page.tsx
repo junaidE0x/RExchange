@@ -7,6 +7,13 @@ import { DashboardShell } from '@/components/dashboard-shell';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { toast } from 'sonner';
 
 const DEPARTMENTS = ['CSE', 'ECE', 'MECH', 'CIVIL', 'IT', 'AIDS', 'AIML', 'EEE'];
@@ -75,27 +82,47 @@ export default function SettingsPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Department</Label>
-              <select
-                value={form.dept}
-                onChange={(e) => setForm((p) => ({ ...p, dept: e.target.value }))}
-                className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              <Select
+                value={form.dept || undefined}
+                onValueChange={(dept) => setForm((p) => ({ ...p, dept }))}
               >
-                {DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
+                <SelectTrigger className="bg-zinc-900 text-white border-white/10 focus:ring-violet-500/50">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 text-white border-white/10">
+                  {DEPARTMENTS.map((d) => (
+                    <SelectItem
+                      key={d}
+                      value={d}
+                      className="text-white focus:bg-violet-600 focus:text-white"
+                    >
+                      {d}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Year</Label>
-              <select
-                value={form.year}
-                onChange={(e) => setForm((p) => ({ ...p, year: e.target.value }))}
-                className="w-full rounded-md border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-violet-500/50"
+              <Select
+                value={form.year || undefined}
+                onValueChange={(year) => setForm((p) => ({ ...p, year }))}
               >
-                {YEARS.map((y) => (
-                  <option key={y} value={y}>Year {y}</option>
-                ))}
-              </select>
+                <SelectTrigger className="bg-zinc-900 text-white border-white/10 focus:ring-violet-500/50">
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 text-white border-white/10">
+                  {YEARS.map((y) => (
+                    <SelectItem
+                      key={y}
+                      value={y}
+                      className="text-white focus:bg-violet-600 focus:text-white"
+                    >
+                      Year {y}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
