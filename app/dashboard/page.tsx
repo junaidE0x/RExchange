@@ -7,6 +7,7 @@ import { Plus, Search, Sun } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getCurrentUser } from '@/lib/auth';
 import { getListings } from '@/lib/listings';
+import { supabase } from '@/lib/supabase';
 import type { CategoryId } from '@/lib/mock-data';
 import { ListingCard } from '@/components/listing-card';
 import { PostListingModal } from '@/components/post-listing-modal';
@@ -40,11 +41,10 @@ function RippleChip({ active, onClick, label }: { active: boolean; onClick: () =
   return (
     <button
       onClick={handleClick}
-      className={`relative overflow-hidden px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap btn-press transition-all ${
-        active
+      className={`relative overflow-hidden px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap btn-press transition-all ${active
           ? 'bg-gradient-to-r from-violet-600 to-violet-500 text-white shadow-lg shadow-violet-500/20'
           : 'glass text-muted-foreground hover:text-foreground hover:border-white/20'
-      }`}
+        }`}
     >
       {ripples.map((r) => (
         <span
@@ -63,6 +63,7 @@ export default function DashboardPage() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [listings, setListings] = useState<any[]>([]);
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -72,19 +73,36 @@ export default function DashboardPage() {
     if (!error && data) setListings(data);
   }
 
+  async function loadSavedIds(userId: string) {
+    try {
+      const { data, error } = await supabase
+        .from('saved')
+        .select('listing_id')
+        .eq('user_id', userId);
+      if (!error && data) {
+        setSavedIds(new Set(data.map((row: any) => String(row.listing_id))));
+      }
+    } catch (e) {
+      console.error('Error loading saved IDs:', e);
+    }
+  }
+
   useEffect(() => {
     async function loadData() {
       try {
         const { user, profile } = await getCurrentUser();
-        
+
         // If no session, redirect to login
         if (!user) {
           router.push('/login');
           return;
         }
-        
+
         setProfile(profile);
-        await loadListings(activeCategory);
+        await Promise.all([
+          loadListings(activeCategory),
+          loadSavedIds(user.id)
+        ]);
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -161,7 +179,20 @@ export default function DashboardPage() {
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5"
             >
               {filtered.map((listing, i) => (
-                <ListingCard key={listing.id} listing={listing} index={i} />
+                <ListingCard
+                  key={listing.id}
+                  listing={listing}
+                  index={i}
+                  isSaved={savedIds.has(String(listing.id))}
+                  onSaveToggle={(saved) => {
+                    setSavedIds((prev) => {
+                      const next = new Set(prev);
+                      if (saved) next.add(String(listing.id));
+                      else next.delete(String(listing.id));
+                      return next;
+                    });
+                  }}
+                />
               ))}
             </motion.div>
           ) : (

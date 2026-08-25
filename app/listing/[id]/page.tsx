@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getCurrentUser } from '@/lib/auth';
+import { toggleSaved } from '@/lib/listings';
 import { DashboardShell } from '@/components/dashboard-shell';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Bookmark } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
@@ -17,6 +18,7 @@ export default function ListingDetailPage() {
   const [listing, setListing] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [requesting, setRequesting] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,7 +26,17 @@ export default function ListingDetailPage() {
       if (!id) return;
       // Get current user
       const { user } = await getCurrentUser();
-      if (user) setCurrentUserId(user.id);
+      if (user) {
+        setCurrentUserId(user.id);
+        // Check if listing is already saved
+        const { data: savedRow } = await supabase
+          .from('saved')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('listing_id', id)
+          .maybeSingle();
+        if (savedRow) setIsSaved(true);
+      }
 
       // Fetch listing with poster's profile
       const { data, error } = await supabase
@@ -43,6 +55,20 @@ export default function ListingDetailPage() {
     }
     load();
   }, [id]);
+
+  const handleToggleSave = async () => {
+    if (!currentUserId || !listing) {
+      toast.error('Please log in to save listings.');
+      return;
+    }
+    const { saved, error } = await toggleSaved(currentUserId, listing.id);
+    if (error) {
+      toast.error('Failed to update saved listing.');
+      return;
+    }
+    setIsSaved(saved);
+    toast.success(saved ? 'Listing saved!' : 'Removed from saved.');
+  };
 
   const handleRequest = async () => {
     if (!currentUserId || !listing) return;
@@ -104,13 +130,27 @@ export default function ListingDetailPage() {
 
   return (
     <DashboardShell activeNav="browse">
-      {/* Back button */}
-      <button
-        onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mb-6 transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" /> Back
-      </button>
+      {/* Top bar with Back button and Save action */}
+      <div className="flex items-center justify-between mb-6">
+        <button
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back
+        </button>
+
+        <button
+          onClick={handleToggleSave}
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full border text-xs font-medium transition-all btn-press ${
+            isSaved
+              ? 'border-violet-500/50 bg-violet-500/20 text-violet-300 shadow-[0_0_15px_-3px_rgba(124,58,237,0.3)]'
+              : 'border-white/10 glass text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          <Bookmark className={`h-3.5 w-3.5 ${isSaved ? 'fill-violet-400 text-violet-400' : ''}`} />
+          {isSaved ? 'Saved' : 'Save'}
+        </button>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Image / category visual */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
@@ -30,6 +30,8 @@ interface ListingCardProps {
   listing: any;
   index?: number;
   variant?: 'default' | 'owned' | 'saved';
+  isSaved?: boolean;
+  onSaveToggle?: (saved: boolean) => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   onUnsave?: (id: string) => void;
@@ -40,6 +42,8 @@ export function ListingCard({
   listing,
   index = 0,
   variant = 'default',
+  isSaved: initialIsSaved,
+  onSaveToggle,
   onEdit,
   onDelete,
   onUnsave,
@@ -48,6 +52,15 @@ export function ListingCard({
   const cat = categories.find((c) => c.id === listing.category);
   const glow = (categoryGlowMap as any)?.[listing.category] || 'rgba(124, 58, 237, 0.3)';
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isSaved, setIsSaved] = useState<boolean>(
+    Boolean(initialIsSaved !== undefined ? initialIsSaved : (listing.isSaved || variant === 'saved'))
+  );
+
+  useEffect(() => {
+    if (initialIsSaved !== undefined) {
+      setIsSaved(initialIsSaved);
+    }
+  }, [initialIsSaved]);
   
   const student = listing.student || listing.profiles || {};
   const studentName = student.name || 'SRM Student';
@@ -60,17 +73,24 @@ export function ListingCard({
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const { user } = await getCurrentUser();
-    if (!user) {
-      toast.error('Please log in to save listings.');
-      return;
-    }
-    const { saved, error } = await toggleSaved(user.id, listing.id);
-    if (error) {
+    try {
+      const { user } = await getCurrentUser();
+      if (!user) {
+        toast.error('Please log in to save listings.');
+        return;
+      }
+      const { saved, error } = await toggleSaved(user.id, listing.id);
+      if (error) {
+        toast.error((error as any)?.message || 'Failed to update saved listing.');
+        return;
+      }
+      setIsSaved(saved);
+      onSaveToggle?.(saved);
+      toast.success(saved ? 'Listing saved!' : 'Removed from saved.');
+    } catch (err) {
+      console.error('Save error:', err);
       toast.error('Failed to update saved listing.');
-      return;
     }
-    toast.success(saved ? 'Listing saved!' : 'Removed from saved.');
   };
 
   const inner = (
@@ -108,11 +128,12 @@ export function ListingCard({
         {/* Save button for default cards */}
         {variant === 'default' && (
           <button
+            type="button"
             onClick={handleSave}
             aria-label="Save listing"
-            className="absolute top-2.5 right-2.5 z-20 p-1.5 rounded-lg bg-black/40 hover:bg-black/70 border border-white/10 transition-colors"
+            className="absolute top-2.5 right-2.5 z-20 p-1.5 rounded-lg bg-black/50 hover:bg-black/80 border border-white/10 transition-colors btn-press"
           >
-            <Bookmark className="h-4 w-4 text-white" />
+            <Bookmark className={`h-4 w-4 transition-colors ${isSaved ? 'text-violet-400 fill-violet-400' : 'text-white'}`} />
           </button>
         )}
 
