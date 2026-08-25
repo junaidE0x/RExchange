@@ -48,7 +48,7 @@ function loadReadIds(userId: string): Set<string> {
 }
 
 function saveReadIds(userId: string, ids: Set<string>) {
-  localStorage.setItem(readKey(userId), JSON.stringify([...ids]));
+  localStorage.setItem(readKey(userId), JSON.stringify(Array.from(ids)));
 }
 
 function timeAgo(iso?: string | null) {
@@ -186,40 +186,56 @@ export function NotificationBell() {
     setLoading(false);
   }, []);
 
-  useEffect(() => {
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+  // ✅ Single, self-contained useEffect with init() inside and proper cleanup
+ const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-    async function init() {
-      const { user } = await getCurrentUser();
-      if (!user) {
-        setLoading(false);
-        return;
-      }
-      setUserId(user.id);
-      await loadNotifications(user.id);
+useEffect(() => {
+  let cancelled = false;
 
-      channel = supabase
-        .channel(`requests-notif-${user.id}`)
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'requests', filter: `to_user=eq.${user.id}` },
-          () => loadNotifications(user.id)
-        )
-        .on(
-          'postgres_changes',
-          { event: '*', schema: 'public', table: 'requests', filter: `from_user=eq.${user.id}` },
-          () => loadNotifications(user.id)
-        )
-        .subscribe();
+  async function init() {
+    const { user } = await getCurrentUser();
+    if (!user || cancelled) {
+      setLoading(false);
+      return;
+    }
+    setUserId(user.id);
+    await loadNotifications(user.id);
+
+    // Remove any existing channel first before creating a new one
+    if (channelRef.current) {
+      await supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
     }
 
-    init();
+    if (cancelled) return;
 
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [loadNotifications]);
+    channelRef.current = supabase
+      .channel(`requests-notif-${user.id}-${Date.now()}`) // unique name per mount
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests', filter: `to_user=eq.${user.id}` },
+        () => loadNotifications(user.id)
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'requests', filter: `from_user=eq.${user.id}` },
+        () => loadNotifications(user.id)
+      )
+      .subscribe();
+  }
 
+  init();
+
+  return () => {
+    cancelled = true;
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+  };
+}, [loadNotifications]);
+
+  // Click-outside handler
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -242,7 +258,9 @@ export function NotificationBell() {
       const ids = loadReadIds(userId);
       ids.add(n.id);
       saveReadIds(userId, ids);
-      setNotifications((prev) => prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)));
+      setNotifications((prev) =>
+        prev.map((item) => (item.id === n.id ? { ...item, read: true } : item))
+      );
     }
     setOpen(false);
     if (n.href) router.push(n.href);
