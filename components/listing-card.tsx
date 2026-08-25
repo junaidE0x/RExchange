@@ -7,6 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Bookmark, Pencil, Trash2 } from 'lucide-react';
 import { categories, categoryGlowMap } from '@/lib/mock-data';
 import type { Listing } from '@/lib/mock-data';
+import { toggleSaved } from '@/lib/listings';
+import { getCurrentUser } from '@/lib/auth';
+import { toast } from 'sonner';
 
 const categoryBadgeColors: Record<string, string> = {
   books: 'bg-violet-500/15 text-violet-300 border-violet-500/30',
@@ -54,6 +57,22 @@ export function ListingCard({
   const initials = studentName.split(' ').filter(Boolean).map((n: string) => n[0]).join('').slice(0, 2).toUpperCase() || 'S';
   const gradient = listing.gradient || 'from-violet-600 via-purple-700 to-indigo-800';
 
+  const handleSave = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const { user } = await getCurrentUser();
+    if (!user) {
+      toast.error('Please log in to save listings.');
+      return;
+    }
+    const { saved, error } = await toggleSaved(user.id, listing.id);
+    if (error) {
+      toast.error('Failed to update saved listing.');
+      return;
+    }
+    toast.success(saved ? 'Listing saved!' : 'Removed from saved.');
+  };
+
   const inner = (
     <div
       ref={cardRef}
@@ -79,12 +98,23 @@ export function ListingCard({
             {cat?.label || listing.category}
           </Badge>
         </div>
-        <div className="absolute top-3 right-3">
+        <div className="absolute top-3 right-12">
           <Badge variant="outline" className="bg-black/40 text-white border-white/20 backdrop-blur-md text-xs">
             {typeLabels[listing.type] || listing.type}
             {listing.type === 'paid' && listing.price && ` · ₹${listing.price}`}
           </Badge>
         </div>
+
+        {/* Save button for default cards */}
+        {variant === 'default' && (
+          <button
+            onClick={handleSave}
+            aria-label="Save listing"
+            className="absolute top-2.5 right-2.5 z-20 p-1.5 rounded-lg bg-black/40 hover:bg-black/70 border border-white/10 transition-colors"
+          >
+            <Bookmark className="h-4 w-4 text-white" />
+          </button>
+        )}
 
         {/* Action buttons overlay for owned/saved variants */}
         {variant !== 'default' && (
