@@ -12,6 +12,7 @@ import { categories } from '@/lib/mock-data';
 import { Button } from '@/components/ui/button';
 import { BackgroundBeams } from '@/components/background-beams';
 import { TiltCard } from '@/components/tilt-card';
+import { supabase } from '@/lib/supabase';
 
 const iconMap: Record<string, typeof BookOpen> = {
   BookOpen, Cpu, FileText, Sparkles, Ticket, Gift,
@@ -67,6 +68,60 @@ function FloatingCard({ children, delay, className }: { children: React.ReactNod
 }
 
 export default function Home() {
+  const [counts, setCounts] = useState<Record<string, number>>({
+    books: 0,
+    electronics: 0,
+    notes: 0,
+    skills: 0,
+    tickets: 0,
+    giveaways: 0,
+  });
+  const [dbStats, setDbStats] = useState<{ students: number; listings: number } | null>(null);
+
+  useEffect(() => {
+    async function loadStats() {
+      try {
+        const { data: listingsData } = await supabase
+          .from('listings')
+          .select('category');
+
+        const { count: studentCount } = await supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true });
+
+        if (listingsData) {
+          const newCounts: Record<string, number> = {
+            books: 0,
+            electronics: 0,
+            notes: 0,
+            skills: 0,
+            tickets: 0,
+            giveaways: 0,
+          };
+          listingsData.forEach((row: any) => {
+            if (row.category && row.category in newCounts) {
+              newCounts[row.category]++;
+            }
+          });
+          setCounts(newCounts);
+          setDbStats({
+            students: studentCount || 0,
+            listings: listingsData.length,
+          });
+        }
+      } catch (err) {
+        console.error('Error loading stats:', err);
+      }
+    }
+    loadStats();
+  }, []);
+
+  const dynamicStats = [
+    { label: 'Students', value: dbStats?.students ?? 8, suffix: (dbStats?.students ?? 8) > 8 ? '+' : '', icon: Users },
+    { label: 'Active Listings', value: dbStats?.listings ?? 12, suffix: (dbStats?.listings ?? 12) > 12 ? '+' : '', icon: Package },
+    { label: 'Categories', value: 6, suffix: '', icon: Layers },
+  ];
+
   return (
     <div className="min-h-screen bg-background overflow-x-hidden relative">
       {/* Global dot grid background */}
@@ -184,7 +239,7 @@ export default function Home() {
       {/* Stats bar */}
       <section className="relative border-y border-white/[0.06] bg-white/[0.02]">
         <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-3 gap-4">
-          {stats.map((stat, i) => (
+          {dynamicStats.map((stat, i) => (
             <motion.div
               key={stat.label}
               initial={{ opacity: 0, y: 15 }}
@@ -243,7 +298,7 @@ export default function Home() {
                       <Icon className="h-6 w-6 text-white" />
                     </div>
                     <h3 className="font-semibold text-lg">{cat.label}</h3>
-                    <p className="text-sm text-muted-foreground mt-1">{cat.count} listings</p>
+                    <p className="text-sm text-muted-foreground mt-1">{counts[cat.id] ?? 0} listings</p>
                   </div>
                 </Link>
               </motion.div>
