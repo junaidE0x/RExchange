@@ -85,53 +85,6 @@ saved     → id, user_id, listing_id (unique on user + listing)
 
 ---
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- A free [Supabase](https://supabase.com) project
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/junaidE0x/RExchange.git
-cd RExchange
-```
-
-### 2. Install dependencies
-
-```bash
-npm install
-```
-
-### 3. Environment variables
-
-Create a `.env.local` file in the root:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-```
-
-> Get these from **Supabase → Project Settings → API**  
-> Use the **anon / public** key (not the service_role key).
-
-### 4. Set up the database
-
-In the Supabase SQL editor, create the four tables (`profiles`, `listings`, `requests`, `saved`) matching the schema above.  
-Disable email confirmation under **Authentication → Providers → Email** for easier local testing if needed.
-
-### 5. Run locally
-
-```bash
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
----
-
 ## Project Structure
 
 ```
@@ -172,7 +125,6 @@ Planned and in-progress updates:
 - [ ] **Full profile page** — editable display name, department, year, and related preferences
 - [ ] Row Level Security (RLS) policies on all tables
 - [ ] Real-time notifications when a request is received
-- [ ] In-app messaging after a request is accepted
 - [ ] Admin moderation panel for flagged listings
 - [ ] PWA support (add to home screen + offline basics)
 
@@ -180,7 +132,9 @@ Planned and in-progress updates:
 
 ## License
 
-MIT
+Copyright © 2026 Junaid E. Ahmed. All Rights Reserved.
+
+This project is proprietary. No part of this codebase may be copied, modified, distributed, or used without explicit written permission from the author.
 
 ---
 
