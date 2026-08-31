@@ -2,9 +2,8 @@
 
 **Campus-only student resource exchange platform for SRM Institute of Science and Technology**
 
-> Built for **FAST Hackathon / PromptWars** (Problem Statement 1) — SRM KTR, August 2026
+A verified marketplace where SRM students can list, discover, and exchange textbooks, notes, electronics, skills, tickets, and more — without relying on scattered WhatsApp groups or notice boards.
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-r--exchange--beryl.vercel.app-7C3AED?style=for-the-badge&logo=vercel)](https://r-exchange-beryl.vercel.app)
 [![Next.js](https://img.shields.io/badge/Next.js-13.5-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.3-38B2AC?style=flat-square&logo=tailwind-css)](https://tailwindcss.com/)
@@ -26,27 +25,21 @@ Current solutions (WhatsApp groups, notice boards, word of mouth) are:
 
 ## The Solution
 
-**RExchange** is a verified, campus-only marketplace where SRM students can list, discover, and exchange resources.
+**RExchange** is a verified, campus-only platform built for SRM students.
 
-- **Verified access** — only `@srmist.edu.in` emails can register
+- **Verified access** — currently restricted to `@srmist.edu.in` emails (moving to official SRM Academia authentication)
 - **Unified discovery** — Books, Electronics, Notes, Skills, Tickets, Giveaways in one feed
 - **Structured listings** — title, category, type (Free / Exchange / Paid), description
 - **Request to Connect** — direct interest flow between students
-- **Content moderation** — keyword filtering flags inappropriate listings
+- **Content moderation** — keyword filtering (expanding to AI image moderation)
 - **Save / Bookmark** — keep track of items you’re interested in
-
----
-
-## Live Demo
-
-**https://r-exchange-beryl.vercel.app**
 
 ---
 
 ## Features
 
 ### Authentication
-- Email/password signup restricted to `@srmist.edu.in`
+- Email/password signup currently restricted to `@srmist.edu.in`
 - Session persistence via Supabase Auth
 - Protected dashboard routes
 
@@ -71,24 +64,23 @@ Current solutions (WhatsApp groups, notice boards, word of mouth) are:
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 13.5 (App Router) |
-| Styling | Tailwind CSS + shadcn/ui |
-| Animation | Framer Motion |
-| Icons | Lucide React |
-| Backend | Supabase (Auth + PostgreSQL) |
-| Toasts | Sonner |
-| Deployment | Vercel |
-| AI Scaffolding | Bolt.ai + Antigravity |
+| Layer          | Technology                   |
+| -------------- | ---------------------------- |
+| Framework      | Next.js 13.5 (App Router)    |
+| Styling        | Tailwind CSS + shadcn/ui     |
+| Animation      | Framer Motion                |
+| Icons          | Lucide React                 |
+| Backend        | Supabase (Auth + PostgreSQL) |
+| Toasts         | Sonner                       |
+| Deployment     | Vercel                       |
 
 ### Database Schema
 
 ```
-profiles   → id, name, reg_no, dept, year, email
-listings   → id, title, category, description, type, price, status, posted_by, created_at
-requests   → id, listing_id, from_user, to_user, status, created_at
-saved      → id, user_id, listing_id  (unique on user + listing)
+profiles  → id, name, reg_no, dept, year, email
+listings  → id, title, category, description, type, price, status, posted_by, created_at
+requests  → id, listing_id, from_user, to_user, status, created_at
+saved     → id, user_id, listing_id (unique on user + listing)
 ```
 
 ---
@@ -128,7 +120,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ### 4. Set up the database
 
 In the Supabase SQL editor, create the four tables (`profiles`, `listings`, `requests`, `saved`) matching the schema above.  
-Disable email confirmation under **Authentication → Providers → Email** for easier testing during development.
+Disable email confirmation under **Authentication → Providers → Email** for easier local testing if needed.
 
 ### 5. Run locally
 
@@ -161,41 +153,36 @@ RExchange/
 
 ## Architecture Decisions
 
-| Decision | Reason |
-|----------|--------|
-| Web app over native | Instant shareable demo via Vercel; AI tools optimised for web |
-| Supabase over custom backend | Zero server setup; Auth + Postgres + real-time out of the box |
-| Email domain validation | SRM Academia API key unavailable → `@srmist.edu.in` restriction achieves the same guarantee |
-| No RLS during hackathon | Reduced debugging overhead under time pressure (add in production) |
+| Decision                     | Reason                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| Web app over native          | Instant shareable URL; easier iteration and deployment                 |
+| Supabase over custom backend | Auth + Postgres + real-time with zero server setup                     |
+| Email domain validation      | Ensures only SRM students can register (interim until Academia API)    |
+| No RLS in early versions     | Faster iteration; planned for production hardening                     |
 
 ---
 
-## Built With
+## Roadmap
 
-- **Bolt.ai** — generated the complete UI scaffold from a single detailed prompt
-- **Antigravity** — used for all backend integration and precise file-level edits
-- **Cursor** — debugging and targeted fixes
+Planned and in-progress updates:
 
----
-
-## Roadmap (Post-Hackathon)
-
-- [ ] Enable Supabase Row Level Security
-- [ ] Real-time notifications on new requests
+- [ ] **SRM Academia authentication** — replace domain-only checks with official SRM Gmail / Academia API key flow for true institutional verification
+- [ ] **Cloudinary integration** — image uploads and storage for listing photos
+- [ ] **Google Vision AI** — automated image moderation (detect inappropriate or irrelevant content)
+- [ ] **Full profile page** — editable display name, department, year, and related preferences
+- [ ] Row Level Security (RLS) policies on all tables
+- [ ] Real-time notifications when a request is received
 - [ ] In-app messaging after a request is accepted
-- [ ] Image uploads via Supabase Storage
-- [ ] Admin moderation panel
-- [ ] SRM Academia API integration (auto-fill dept & year)
-- [ ] PWA support
+- [ ] Admin moderation panel for flagged listings
+- [ ] PWA support (add to home screen + offline basics)
 
 ---
 
 ## License
 
-This project was built for the **FAST Hackathon / PromptWars** at SRM Institute of Science and Technology, Kattankulathur (August 2026).
+MIT
 
 ---
 
 **Developer:** [Junaid E. Ahmed](https://github.com/junaidE0x)  
-**Institution:** SRM KTR  
-**Live:** [r-exchange-beryl.vercel.app](https://r-exchange-beryl.vercel.app)
+**Institution:** SRM KTR
