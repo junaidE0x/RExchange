@@ -1,4 +1,4 @@
-# RExchange
+# SRMxchange
 
 **Campus-only student resource exchange platform for SRM Institute of Science and Technology**
 
@@ -25,7 +25,7 @@ Current solutions (WhatsApp groups, notice boards, word of mouth) are:
 
 ## The Solution
 
-**RExchange** is a verified, campus-only platform built for SRM students.
+**SRMxchange** is a verified, campus-only platform built for SRM students.
 
 - **Verified access** — currently restricted to `@srmist.edu.in` emails (moving to official SRM Academia authentication)
 - **Unified discovery** — Books, Electronics, Notes, Skills, Tickets, Giveaways in one feed
@@ -88,7 +88,7 @@ saved     → id, user_id, listing_id (unique on user + listing)
 ## Project Structure
 
 ```
-RExchange/
+SRMxchange/
 ├── app/                    # Next.js App Router pages
 │   ├── dashboard/          # Protected dashboard routes
 │   ├── listing/[id]/       # Listing detail
